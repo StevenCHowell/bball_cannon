@@ -1,7 +1,0 @@
-name: example-environment
-channels:
-  - defaults
-dependencies:
-  - numpy
-  - bokeh
-
