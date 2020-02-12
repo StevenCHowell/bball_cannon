@@ -2,4 +2,4 @@ numpy
 pandas
 bokeh
 seaborn
-sklearn
+scikit-learn
