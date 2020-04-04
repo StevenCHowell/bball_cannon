@@ -3,3 +3,5 @@ pandas
 bokeh
 seaborn
 scikit-learn
+# tensorflow_gpu==1.5.0
+# gym
