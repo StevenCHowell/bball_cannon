@@ -32,32 +32,35 @@ class Shot():
 
         return np.array([dist, height, speed])
 
-    def shoot(self, angle):
-        self.angle = np.deg2rad(angle)
-        if angle < 0 or 90 < angle:
-            # want to exclude this possibility all together
-            reward = -self.dist
+    def shoot_reward(self, angle):
+        shoot_delta_x(angle)
+        if self.rim[0] < self.x_shot < self.rim[1]:
+            # Big reward for success.  Not sure how big to make this.
+            reward = 500.0
         else:
+            # Penalty for missing equal to distance under/over shot.
+            reward = -abs(self.delta_x)
+
+        return reward
+
+    def shoot_delta_x(self, angle):
+        self.angle = np.deg2rad(angle)
+        self.delta_x = self.dist
+        if 0 < angle or angle < 90:
             cos = np.cos(self.angle)
             sin = np.sin(self.angle)
 
+            # calculate the determinant
             D = (self.speed * sin) ** 2 + 2 * self.g * self.delta_h
             if D > 0:  # ball passes through correct height twice
                 # negative root is the downward part of arc
                 self.t_m = (-self.speed * sin - np.sqrt(D)) / self.g
                 self.x_shot = self.speed * cos * self.t_m
                 self.delta_x = self.x_shot - self.dist  # +/-: over/under-shot
-                if self.rim[0] < self.x_shot < self.rim[1]:
-                    # Big reward for success.  Not sure how big to make this.
-                    reward = 100
-                else:
-                    # Penalty for missing equal to distance under/over shot.
-                    reward = -abs(self.delta_x)
             else:
                 # ball not shot high enough
                 self.t_m = 1.3  # s
-                reward = -self.dist
-        return reward
+        return self.delta_x
 
     def calc_path(self):
         if self.angle:
@@ -107,3 +110,42 @@ class Shot():
             plotting.show(p)
         else:
             print('Error: no attempts made!')
+
+
+class AgentPoly():
+    def __init__(self, shot):
+        self.shot = shot
+
+    def learn(self, max_iters, *, angle_0=89, step_size=10):
+        p_or_m = np.sign(45 - angle_0)
+        angles = [angle_0, angle_0 + (p_or_m * step_size)]
+        delta_x = []
+
+        # fire first two shots
+        for angle in angles:
+            delta_x.append(self.shot.shoot_delta_x(angle))
+
+        # first first order polynomial
+        coef = np.polyfit(angles, delta_x, 1)
+        guess = -coef[1] / coef[0]
+
+        # fire estimated best guess as third shot
+        angles.append(guess)
+        delta_x.append(self.shot.shoot_delta_x(guess))
+
+        success_angle = np.nan
+        for i in range(max_iters-3):
+            if np.abs(delta_x[-1]) < self.shot.ball_radius:
+                success_angle = angles[-1]
+                break
+            else:
+                # fit second order polynomial
+                coef = np.polyfit(angles, delta_x, 2)
+                guess = np.roots(coef).max()
+
+                # fire estimated best guess
+                angles.append(guess)
+                delta_x.append(self.shot.shoot_delta_x(guess))
+
+        self.results = np.c_[angles, delta_x]
+        return success_angle
