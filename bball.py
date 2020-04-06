@@ -16,11 +16,14 @@ class Shot():
         self.g = -32.174  # ft/s^2
         self.path = []
 
-    def setup(self):
+    def setup(self, params=None):
         # randomly select cannon parameters: distance, height, speed
-        min_params = [5.0, 0.0, 34.3]
-        max_params = [25.0, 10.0, 68.6]
-        dist, height, speed = np.random.uniform(min_params, max_params)
+        if params is None:
+            min_params = [5.0, 0.0, 34.3]
+            max_params = [25.0, 10.0, 68.6]
+            dist, height, speed = np.random.uniform(min_params, max_params)
+        else:
+            dist, height, speed = params
         self.dist = dist  # ft, distance to hoop
         self.height = height  # ft, height of the cannon
         self.speed = speed  # ft/s
